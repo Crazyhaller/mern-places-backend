@@ -6,20 +6,6 @@ const getCoordsForAddress = require('../util/location')
 const Place = require('../models/place')
 const User = require('../models/user')
 
-let DUMMY_PLACES = [
-  {
-    id: 'p1',
-    title: 'Empire State Building',
-    description: 'One of the most famous sky scrappers in the world.',
-    location: {
-      lat: 40.7484445,
-      lng: -73.9882393,
-    },
-    address: '20 W 34th St., New York, NY 10001',
-    creator: 'u1',
-  },
-]
-
 const getPlaceById = async (req, res, next) => {
   const placeId = req.params.pid
   let place
@@ -46,10 +32,11 @@ const getPlaceById = async (req, res, next) => {
 
 const getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid
-  let places
+
+  let userWithPlaces
 
   try {
-    places = await Place.find({ creator: userId })
+    userWithPlaces = await User.findById(userId).populate('places')
   } catch (err) {
     const error = new HttpError(
       'Fetching places failed, please try again later.',
@@ -58,13 +45,17 @@ const getPlacesByUserId = async (req, res, next) => {
     return next(error)
   }
 
-  if (!places || places.length === 0) {
+  if (!userWithPlaces || userWithPlaces.places.length === 0) {
     return next(
       new HttpError('Could not find places for the provided user id.', 404)
     )
   }
 
-  res.json({ places: places.map((place) => place.toObject({ getters: true })) })
+  res.json({
+    places: userWithPlaces.places.map((place) =>
+      place.toObject({ getters: true })
+    ),
+  })
 }
 
 const createPlace = async (req, res, next) => {
